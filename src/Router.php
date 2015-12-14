@@ -12,7 +12,7 @@
 namespace Lucid\Mux;
 
 use SplStack;
-
+use InvalidArgumentException;
 use Lucid\Mux\Request\UrlGenerator;
 use Lucid\Mux\Request\UrlGeneratorInterface;
 use Lucid\Mux\Handler\HandlerDispatcher;
@@ -23,13 +23,13 @@ use Lucid\Mux\Request\ContextInterface as RequestContextInterface;
 use Lucid\Mux\Request\Context as RequestContext;
 
 /**
- * @class Muxer
+ * @class Router
  *
  * @package Lucid\Mux
  * @version $Id$
  * @author iwyg <mail@thomas-appel.com>
  */
-class Muxer implements MultiplexerInterface
+class Router implements MultiplexerInterface
 {
     /**
      * routes
@@ -102,13 +102,11 @@ class Muxer implements MultiplexerInterface
      */
     public function dispatch(RequestContextInterface $request)
     {
-        $match = $this->matcher->matchRequest($request, $this->routes);
-
-        if (true !== $match->isMatch()) {
-            throw MatchException::noRouteMatch($request);
+        if (($match = $this->matcher->matchRequest($request, $this->routes)) && $match->isMatch()) {
+            return $this->dispatchRequest($request, $match);
         }
 
-        return $this->dispatchRequest($request, $match);
+        throw MatchException::noRouteMatch($request);
     }
 
     /**
@@ -128,7 +126,7 @@ class Muxer implements MultiplexerInterface
 
         try {
             $url = $this->getGenerator()->generate($name, $parameters, $options['host'], $type);
-        } catch (\InvalidArgumentException $e) {
+        } catch (InvalidArgumentException $e) {
             throw $e;
         }
 
@@ -211,7 +209,7 @@ class Muxer implements MultiplexerInterface
      *
      * @return mixed the request response.
      */
-    private function dispatchRequest(RequestContextinterface $request, MatchContextInterface $match)
+    private function dispatchRequest(RequestContextInterface $request, MatchContextInterface $match)
     {
         $previous = $this->getGenerator()->getRequestContext();
 
@@ -279,11 +277,11 @@ class Muxer implements MultiplexerInterface
     private function getOptions(array $options)
     {
         return array_merge([
-            'method' => 'GET',
-            'host' => 'localhost',
-            'port' => 80,
-            'query' => '',
-            'scheme' => 'http',
+            'method'    => 'GET',
+            'host'      => 'localhost',
+            'port'      => 80,
+            'query'     => '',
+            'scheme'    => 'http',
             'base_path' => ''
         ], $options);
     }
